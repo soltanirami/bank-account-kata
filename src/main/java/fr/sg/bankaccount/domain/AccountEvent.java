@@ -17,6 +17,6 @@ public abstract class AccountEvent implements Event {
     protected String id = UUID.randomUUID().toString();
     protected Instant time = LocalDateTime.now().toInstant(ZoneOffset.UTC);
 
-    public abstract void visit(BankAccount bankAccount);
+    public abstract void visit(Account account);
 
 }

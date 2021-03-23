@@ -14,12 +14,12 @@ import java.util.List;
  * @author Rami SOLTANI created on 21/03/2021
  **/
 @Getter
-public class BankAccount {
+public class Account {
     String id;
     String owner;
     BigDecimal balance;
 
-    public BankAccount(List<AccountEvent> events) {
+    public Account(List<AccountEvent> events) {
         events.forEach(accountEvent -> accountEvent.visit(this)); //double dispatch
     }
 

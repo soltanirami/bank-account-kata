@@ -18,7 +18,7 @@ public class DepositedEvent extends AccountEvent {
     BigDecimal balance;
 
     @Override
-    public void visit(BankAccount bankAccount) {
-        bankAccount.accept(this);
+    public void visit(Account account) {
+        account.accept(this);
     }
 }

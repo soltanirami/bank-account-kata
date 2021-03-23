@@ -2,7 +2,7 @@ package fr.sg.bankaccount.config;
 
 import fr.sg.bankaccount.Constants;
 import fr.sg.bankaccount.domain.AccountCreatedEvent;
-import fr.sg.bankaccount.eventstorage.EventStore;
+import fr.sg.bankaccount.eventstore.EventStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 

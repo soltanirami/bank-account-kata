@@ -5,6 +5,9 @@ import lombok.NonNull;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Digits;
 import java.math.BigDecimal;
 
 /**
@@ -16,5 +19,9 @@ import java.math.BigDecimal;
 public class WithdrawlCommand {
     @NonNull
     String accountId;
+
+    @DecimalMin(value = "0.01")
+    @DecimalMax(value = "9999999999999999999.99")
+    @Digits(integer = 19, fraction = 2)
     BigDecimal amount;
 }

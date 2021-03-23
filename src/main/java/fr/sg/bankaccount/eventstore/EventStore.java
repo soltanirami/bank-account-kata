@@ -1,7 +1,8 @@
-package fr.sg.bankaccount.eventstorage;
+package fr.sg.bankaccount.eventstore;
 
 import com.google.common.collect.Lists;
 import fr.sg.bankaccount.domain.Event;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.util.Map;
  *
  * @author Rami SOLTANI created on 21/03/2021
  **/
+@Slf4j
 @Component
 public class EventStore {
     private final Map<String, List<Event>> events = new HashMap<>();
@@ -23,6 +25,7 @@ public class EventStore {
             eventList.add(event);
             return eventList;
         });
+        log.info("Adding event :[{}] to Account : [{}]", event, accountId);
     }
 
     public List<Event> getEvents(String ressourceId) {
