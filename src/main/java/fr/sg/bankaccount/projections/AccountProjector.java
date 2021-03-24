@@ -1,12 +1,13 @@
 package fr.sg.bankaccount.projections;
 
+import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import fr.sg.bankaccount.domain.AccountEvent;
 import fr.sg.bankaccount.domain.DepositedEvent;
 import fr.sg.bankaccount.domain.WithDrawnEvent;
 import fr.sg.bankaccount.query.OperationType;
 import fr.sg.bankaccount.query.Transaction;
 import fr.sg.bankaccount.repository.TransactionRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -23,10 +24,18 @@ import java.time.ZoneOffset;
  **/
 @Slf4j
 @Component
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class AccountProjector {
     private final TransactionRepository transactionRepository;
+    private final EventBus eventBus;
 
+    @Autowired
+    public AccountProjector(TransactionRepository transactionRepository, EventBus eventBus) {
+        this.transactionRepository = transactionRepository;
+        this.eventBus = eventBus;
+        this.eventBus.register(this);
+    }
+
+    @Subscribe
     public void project(AccountEvent event) {
         if (event instanceof DepositedEvent) {
             apply((DepositedEvent) event);

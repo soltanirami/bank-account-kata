@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @Accessors(fluent = true)
 @Value
 @AllArgsConstructor
-public class WithdrawlCommand {
+public class WithdrawlCommand implements Command{
     @NonNull
     String accountId;
 

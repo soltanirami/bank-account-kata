@@ -1,5 +1,7 @@
 package fr.sg.bankaccount.service;
 
+import com.google.common.eventbus.EventBus;
+import fr.sg.bankaccount.command.Command;
 import fr.sg.bankaccount.command.DepositCommand;
 import fr.sg.bankaccount.command.WithdrawlCommand;
 import fr.sg.bankaccount.domain.Account;
@@ -26,30 +28,26 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class AccountService {
     private final EventStore eventStore;
-    private final AccountProjector projection;
-    private final Validator validator;
+    private final BankAccountValidator<Command> validator;
 
 
     public void makeADeposit(DepositCommand depositCommand) {
-        new BankAccountValidator<>(validator, depositCommand).validate();
+        validator.validate(depositCommand);
         log.info("DepositCommand [{}] ", depositCommand.toString());
         Account account = recalculateBankAccount(depositCommand.accountId());
         // make a deposit
         AccountEvent depositedEvent = account.makeADeposit(depositCommand);
         eventStore.addEvent(account.getId(), depositedEvent);
-        projection.project(depositedEvent);
     }
 
     public void makeAWithDrawl(@Valid WithdrawlCommand withdrawlCommand) {
-        new BankAccountValidator<>(validator, withdrawlCommand).validate();
+        validator.validate(withdrawlCommand);
         log.info("WithDrawlCommand [{}] ", withdrawlCommand.toString());
         Account account = recalculateBankAccount(withdrawlCommand.accountId());
         // make a withdrawl
         AccountEvent withDrawnEvent = account.makeAWithDrawl(withdrawlCommand);
         // save the withDrawnEvent in the event store
         eventStore.addEvent(account.getId(), withDrawnEvent);
-        // synchronize with the read repository
-        projection.project(withDrawnEvent);
     }
 
     private Account recalculateBankAccount(String s) {
