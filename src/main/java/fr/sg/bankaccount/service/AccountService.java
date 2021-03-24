@@ -6,14 +6,13 @@ import fr.sg.bankaccount.domain.Account;
 import fr.sg.bankaccount.domain.AccountEvent;
 import fr.sg.bankaccount.eventstore.EventStore;
 import fr.sg.bankaccount.projections.AccountProjector;
-import fr.sg.bankaccount.validator.BankAccountValidator;
+import fr.sg.bankaccount.validator.CommandValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.validation.Valid;
-import javax.validation.Validator;
 import java.util.stream.Collectors;
 
 /**
@@ -27,28 +26,28 @@ import java.util.stream.Collectors;
 public class AccountService {
     private final EventStore eventStore;
     private final AccountProjector projection;
-    private final Validator validator;
+    private final CommandValidator validator;
 
 
     public void makeADeposit(DepositCommand depositCommand) {
-        new BankAccountValidator<>(validator, depositCommand).validate();
+        validator.validate(depositCommand);
         log.info("DepositCommand [{}] ", depositCommand.toString());
         Account account = recalculateBankAccount(depositCommand.accountId());
         // make a deposit
         AccountEvent depositedEvent = account.makeADeposit(depositCommand);
+        // save the depositedEvent in the event store
         eventStore.addEvent(account.getId(), depositedEvent);
+        // synchronize with the read repository
         projection.project(depositedEvent);
     }
 
     public void makeAWithDrawl(@Valid WithdrawlCommand withdrawlCommand) {
-        new BankAccountValidator<>(validator, withdrawlCommand).validate();
+        validator.validate(withdrawlCommand);
         log.info("WithDrawlCommand [{}] ", withdrawlCommand.toString());
         Account account = recalculateBankAccount(withdrawlCommand.accountId());
         // make a withdrawl
         AccountEvent withDrawnEvent = account.makeAWithDrawl(withdrawlCommand);
-        // save the withDrawnEvent in the event store
         eventStore.addEvent(account.getId(), withDrawnEvent);
-        // synchronize with the read repository
         projection.project(withDrawnEvent);
     }
 
