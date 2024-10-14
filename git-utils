@@ -1,0 +1,4 @@
+git log --pretty="%h %an %ad" --date=short | \
+awk '{print $2, $3}' | \
+awk '{split($2,a,"-"); print $1, a[1]"-"a[2]"-W"strftime("%U", mktime(a[1]" "a[2]" "a[3]" 00 00 00"))}' | \
+sort | uniq -c
