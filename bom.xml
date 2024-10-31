@@ -1,0 +1,28 @@
+<profiles>
+    <profile>
+        <id>e2e-tests</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <includes>
+                            <include>**/e2e/**/*.java</include> <!-- Runs only e2e tests -->
+                        </includes>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>e2e-test-execution</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
