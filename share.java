@@ -1,49 +1,63 @@
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-public class Main {
-    public static void main(String[] args) {
-        DealOriginationInput dealOriginationInput = DealOriginationInput.builder()
-                .originationApplication(new OriginationApplication(/* initialize as needed */))
-                .stiName("CIB Loan Deal")
-                .shortDescription("Corporate loan for expansion")
-                .syndicationType(new dealStructure_SyndicationType(/* initialize as needed */))
-                .syndicationTypeCode("STC001")
-                .confidentialCode("CONF12345")
-                .dealOriginatorEntityInput(new DealOriginatorEntityInput(/* initialize as needed */))
-                .originatingCountry("United States")
-                .originatingCountryId("US")
-                .globalAmountAtStructuration("100000000") // 100 million
-                .mainCurrency("USD")
-                .typeOfFinancing(new TypeOfFinancing(/* initialize as needed */))
-                .typeOfFinancingCode("TF123")
-                .useOfFunds("Business Expansion")
-                .isSustainabilityLinked(true)
-                .isGreen(false)
-                .isEligibleToLeagueTables(true)
-                .keyDeal(true)
-                .newMoney("Yes")
-                .maxTenor(60) // in months
-                .maxTenorDurationUnit(TimeUnit.MONTHS)
-                .closingMemoDate(LocalDate.of(2024, 12, 31))
-                .pitch(Arrays.asList(new PitchInput(/* initialize as needed */)))
-                .originatorGlossary(new OriginatorGlossaryInput(/* initialize as needed */))
-                .bookingEntityAliasTypeCodes(Arrays.asList("BEAT001", "BEAT002"))
-                .globalAmountAtSigning("90000000") // 90 million
-                .finalAllocatedAmount("80000000") // 80 million
-                .bookingDate(LocalDate.of(2024, 1, 15))
-                .firstArchivedDate(LocalDate.of(2024, 6, 1))
-                .subSectorCode("SSC100")
-                .distributionSegmentCode("DSC200")
-                .netNBI(500000)
-                .rwa(300000)
-                .regionCode("NA") // North America
-                .cmgRequired(new CMGRequired(/* initialize as needed */))
-                .cmgDecision(new CMGDecision(/* initialize as needed */))
-                .build();
+class DealClientE2ETest {
 
-        // Print or use dealOriginationInput as needed
-        System.out.println(dealOriginationInput);
+    @Test
+    void shouldExecuteQueryWithoutException_whenFindDealById() {
+        // Assuming savedDeal is fetched from the database or another source after saving.
+        DealOriginationInput savedDeal = fetchSavedDeal(); // replace with actual fetch method
+
+        // Assertions for each field to ensure values are saved correctly
+        assertEquals(LocalDate.of(2024, 10, 1), savedDeal.getBookingDate());
+        assertEquals("LDT", savedDeal.getOriginationApplication());
+        assertEquals("Corporate loan for expansion", savedDeal.getShortDescription());
+        assertEquals("CLUB_DEAL", savedDeal.getSyndicationType());
+        assertEquals("United States", savedDeal.getOriginatingCountry());
+        assertEquals("US", savedDeal.getOriginatingCountryId());
+        assertEquals("100000000", savedDeal.getGlobalAmountAtStructuration()); // 100 million
+        assertEquals("USD", savedDeal.getMainCurrency());
+        assertEquals("NEW", savedDeal.getTypeOfFinancing());
+        assertEquals("EXPANSION", savedDeal.getUseOfFunds());
+        assertTrue(savedDeal.getIsSustainabilityLinked());
+        assertFalse(savedDeal.getIsGreen());
+        assertTrue(savedDeal.getIsEligibleToLeagueTables());
+        assertTrue(savedDeal.getKeyDeal());
+        assertEquals("Yes", savedDeal.getNewMoney());
+        assertEquals(60, savedDeal.getMaxTenor()); // in months
+        assertEquals(TimeUnit.MONTH, savedDeal.getMaxTenorDurationUnit());
+        assertEquals(LocalDate.of(2024, 12, 31), savedDeal.getClosingMemoDate());
+
+        // Assertions for nested objects, lists, and enums
+        assertNotNull(savedDeal.getOriginatorGlossary());
+        assertEquals("CREDIT_APPROVED", savedDeal.getOriginatorGlossary().getOriginationStatus());
+        assertEquals("FINANCING", savedDeal.getOriginatorGlossary().getTypeOfDeal());
+        assertEquals(90.0, savedDeal.getOriginatorGlossary().getProbabilityOfSuccess());
+        assertEquals("NON MATERIAL", savedDeal.getOriginatorGlossary().getEsgComment());
+
+        assertEquals("90000000", savedDeal.getGlobalAmountAtSigning()); // 90 million
+        assertEquals("80000000", savedDeal.getFinalAllocatedAmount()); // 80 million
+        assertEquals(LocalDate.of(2024, 11, 1), savedDeal.getFirstArchivedDate());
+        assertEquals(50000, savedDeal.getNetNBI());
+        assertEquals(300000, savedDeal.getRwa());
+        assertEquals("NA", savedDeal.getRegionCode()); // North America
+        assertEquals(CMGRequired.NOT_APPLICABLE, savedDeal.getCmgRequired());
+        assertEquals(CMGDecision.NOT_APPLICABLE, savedDeal.getCmgDecision());
+
+        // Additional assertions for list values or other complex fields
+        assertNotNull(savedDeal.getBookingEntityAliasTypeCodes());
+        assertTrue(savedDeal.getBookingEntityAliasTypeCodes().contains("BEAT001"));
+        assertTrue(savedDeal.getBookingEntityAliasTypeCodes().contains("BEAT002"));
+        
+        // Print or log to verify the savedDeal, if needed
+        System.out.println(savedDeal);
+    }
+
+    // Mock or actual method to fetch saved deal
+    private DealOriginationInput fetchSavedDeal() {
+        // Replace with actual logic to fetch the deal from storage or service
+        return null;
     }
 }
