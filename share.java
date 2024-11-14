@@ -1,3 +1,19 @@
+private static String createFieldRegex(String fieldName) {
+    StringBuilder regexBuilder = new StringBuilder();
+    for (char c : fieldName.toCharArray()) {
+        if (Character.isUpperCase(c)) {
+            regexBuilder.append("[_]*").append(Character.toLowerCase(c));  // Optional underscore before uppercase letters
+        } else if (c == '_') {
+            regexBuilder.append("[_]*");  // Handle multiple underscores between words
+        } else {
+            regexBuilder.append(c);
+        }
+    }
+    return regexBuilder.toString();
+}
+
+
+
 import java.io.*;
 import java.nio.file.*;
 import java.util.HashMap;
