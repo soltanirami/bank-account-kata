@@ -1,7 +1,3 @@
-
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 import java.io.*;
 import java.nio.file.*;
 import java.util.HashMap;
@@ -17,30 +13,29 @@ public class AnnotationInjector {
         public FieldInfo(String className, String fieldName, int collibraId) {
             this.className = className;
             this.fieldName = fieldName;
+            this.collibraId = collibraId;
         }
     }
 
-    // Modified loadMapping to accept a specific LDT Table to check
-    public static Map<String, FieldInfo> loadMapping(String excelPath, String specifiedLdtTable) throws IOException {
+    // Load mappings from a CSV file with specified LDT Table
+    public static Map<String, FieldInfo> loadMapping(String csvPath, String specifiedLdtTable) throws IOException {
         Map<String, FieldInfo> fieldMappings = new HashMap<>();
 
-        try (FileInputStream fis = new FileInputStream(excelPath);
-             Workbook workbook = new XSSFWorkbook(fis)) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(csvPath))) {
+            String line;
+            reader.readLine(); // Skip header line
+            while ((line = reader.readLine()) != null) {
+                String[] columns = line.split(";");
+                if (columns.length < 4) continue;
 
-            Sheet sheet = workbook.getSheetAt(0);
-            for (Row row : sheet) {
-                Cell tableCell = row.getCell(1); // LDT Table column
-                Cell columnCell = row.getCell(2); // LDT Table Column column
-                Cell idCell = row.getCell(3);     // ID Collibra column
+                String tableName = columns[1].trim();
+                String fieldName = columns[2].trim();
+                int collibraId = Integer.parseInt(columns[3].trim());
 
-                if (tableCell != null && columnCell != null && idCell != null) {
-                    String tableName = tableCell.getStringCellValue();
-                    if (tableName.equalsIgnoreCase(specifiedLdtTable)) { // Filter by specified LDT Table
-                        String fieldName = columnCell.getStringCellValue();
-                        int collibraId = (int) idCell.getNumericCellValue();
-                        String key = tableName + "." + fieldName;
-                        fieldMappings.put(key, new FieldInfo(tableName, fieldName, collibraId));
-                    }
+                // Filter by specified LDT Table
+                if (tableName.equalsIgnoreCase(specifiedLdtTable)) {
+                    String key = tableName + "." + fieldName;
+                    fieldMappings.put(key, new FieldInfo(tableName, fieldName, collibraId));
                 }
             }
         }
@@ -72,16 +67,16 @@ public class AnnotationInjector {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 3) {
-            System.out.println("Usage: java AnnotationInjector <excelPath> <sourceDirectory> <LDT Table>");
+            System.out.println("Usage: java AnnotationInjector <csvPath> <sourceDirectory> <LDT Table>");
             return;
         }
 
-        String excelPath = args[0];
+        String csvPath = args[0];
         String sourceDirectory = args[1];
         String specifiedLdtTable = args[2];
 
-        // Step 1: Load mapping from Excel filtered by specified LDT Table
-        Map<String, FieldInfo> mappings = loadMapping(excelPath, specifiedLdtTable);
+        // Step 1: Load mapping from CSV filtered by specified LDT Table
+        Map<String, FieldInfo> mappings = loadMapping(csvPath, specifiedLdtTable);
 
         // Step 2: Inject annotations into source files
         injectAnnotations(sourceDirectory, mappings);
