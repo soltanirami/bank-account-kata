@@ -1,72 +1,4 @@
-private static String createFieldRegex(String fieldName) {
-    StringBuilder regexBuilder = new StringBuilder();
-    for (char c : fieldName.toCharArray()) {
-        if (Character.isUpperCase(c)) {
-            regexBuilder.append("[_]*").append(Character.toLowerCase(c));  // Optional underscore before uppercase letters
-        } else if (c == '_') {
-            regexBuilder.append("[_]*");  // Handle multiple underscores between words
-        } else {
-            regexBuilder.append(c);
-        }
-    }
-    return regexBuilder.toString();
-}
 
-
-
-import java.io.*;
-import java.nio.file.*;
-import java.util.HashMap;
-import java.util.Map;
-
-public class AnnotationInjector {
-
-    public static class FieldInfo {
-        String className;
-        String fieldName;
-        int collibraId;
-
-        public FieldInfo(String className, String fieldName, int collibraId) {
-            this.className = className;
-            this.fieldName = fieldName;
-        }
-    }
-
-    // Load mappings from a CSV file with specified LDT Table
-    public static Map<String, FieldInfo> loadMapping(String csvPath, String specifiedLdtTable) throws IOException {
-        Map<String, FieldInfo> fieldMappings = new HashMap<>();
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvPath))) {
-            String line;
-            reader.readLine(); // Skip header line
-            while ((line = reader.readLine()) != null) {
-                String[] columns = line.split(";");
-                if (columns.length < 4) continue;
-
-                String tableName = columns[1].trim();
-                String fieldName = columns[2].trim();
-                int collibraId = Integer.parseInt(columns[3].trim().replaceAll("^\"|\"$", ""));
-
-                if (tableName.equalsIgnoreCase(specifiedLdtTable)) {
-                    String key = tableName + "." + fieldName;
-                    fieldMappings.put(key, new FieldInfo(tableName, fieldName, collibraId));
-                }
-            }
-        }
-        return fieldMappings;
-    }
-
-    public static void injectAnnotations(String sourceDirectory, Map<String, FieldInfo> mappings) throws IOException {
-        for (FieldInfo fieldInfo : mappings.values()) {
-            Path classFilePath = Paths.get(sourceDirectory, fieldInfo.className + ".java");
-
-            if (Files.exists(classFilePath)) {
-                String content = new String(Files.readAllBytes(classFilePath));
-
-                // Insert the import after the package declaration
-                if (!content.contains("import com.example.BusinessTerm;")) {
-                    content = content.replaceFirst(
-                        "(?m)^package\\s+.*?;", // Match the package declaration
                         "$0\nimport com.example.BusinessTerm;" // Add import after package
                     );
                 }
@@ -225,3 +157,44 @@ public class AnnotationInjector {
 }
 
 }
+
+
+public class AnnotationInjectorTest {
+
+    public static void main(String[] args) {
+        // Test cases for various field name conversions
+        testCreateFieldRegex("targetPaymentDate", "target[_]*payment[_]*date");         // camelCase to flexible pattern
+        testCreateFieldRegex("target_payment_date", "target[_]*payment[_]*date");       // snake_case to flexible pattern
+        testCreateFieldRegex("anotherFieldExample", "another[_]*field[_]*example");     // camelCase to flexible pattern
+        testCreateFieldRegex("another_field_example", "another[_]*field[_]*example");   // snake_case to flexible pattern
+        testCreateFieldRegex("simpleField", "simple[_]*field");                         // camelCase simple example
+        testCreateFieldRegex("simple_field", "simple[_]*field");                        // snake_case simple example
+    }
+
+    // Method to test createFieldRegex and verify if the generated regex is as expected
+    private static void testCreateFieldRegex(String input, String expectedPattern) {
+        String generatedPattern = createFieldRegex(input);
+        
+        if (generatedPattern.equals(expectedPattern)) {
+            System.out.println("PASS: " + input + " -> " + generatedPattern);
+        } else {
+            System.out.println("FAIL: " + input + " -> " + generatedPattern + " (Expected: " + expectedPattern + ")");
+        }
+    }
+
+    // The createFieldRegex method to be tested
+    private static String createFieldRegex(String fieldName) {
+        StringBuilder regexBuilder = new StringBuilder();
+        for (char c : fieldName.toCharArray()) {
+            if (Character.isUpperCase(c)) {
+                regexBuilder.append("[_]*").append(Character.toLowerCase(c));  // Optional underscore before uppercase letters
+            } else if (c == '_') {
+                regexBuilder.append("[_]*");  // Handle multiple underscores between words
+            } else {
+                regexBuilder.append(c);
+            }
+        }
+        return regexBuilder.toString();
+    }
+}
+
