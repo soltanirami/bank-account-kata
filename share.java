@@ -1,4 +1,17 @@
-
+private static String createFieldRegex(String fieldName) {
+    StringBuilder regexBuilder = new StringBuilder();
+    for (char c : fieldName.toCharArray()) {
+        if (Character.isUpperCase(c)) {
+            regexBuilder.append("[_]*").append(Character.toLowerCase(c)); // Allow underscore before uppercase letters
+        } else if (c == '_') {
+            regexBuilder.append("[_]*"); // Allow multiple underscores
+        } else {
+            regexBuilder.append(c);
+        }
+    }
+    regexBuilder.append("\\s*"); // Allow extra spaces after the name
+    return regexBuilder.toString();
+}
                         "$0\nimport com.example.BusinessTerm;" // Add import after package
                     );
                 }
