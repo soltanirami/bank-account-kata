@@ -1,4 +1,4 @@
-import java.io.*;
+no import java.io.*;
 import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +74,8 @@ public class AnnotationInjector {
         String csvPath = args[0];
         String sourceDirectory = args[1];
         String specifiedLdtTable = args[2];
-
+// Remove any extra quotes and trim whitespace
+int collibraId = Integer.parseInt(columns[3].trim().replaceAll("^\"|\"$", ""));
         // Step 1: Load mapping from CSV filtered by specified LDT Table
         Map<String, FieldInfo> mappings = loadMapping(csvPath, specifiedLdtTable);
 
@@ -83,4 +84,6 @@ public class AnnotationInjector {
 
         System.out.println("Annotation injection completed for LDT Table: " + specifiedLdtTable);
     }
+
+
 }
