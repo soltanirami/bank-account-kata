@@ -1,31 +1,36 @@
-import java.util.ArrayList;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
+
 import java.util.List;
 import java.util.Map;
 
-public class SyncReport {
+public class SyncChecker {
 
-    private List<String> mismatches = new ArrayList<>();
+    /**
+     * Compares two objects field-by-field and identifies differences
+     * @param ldtObject The LDT Deal object
+     * @param csObject The CS Deal object
+     * @return A detailed mismatch report
+     */
+    public static SyncReport compareObjects(Object ldtObject, Object csObject) {
+        Map<String, Object> ldtMap = ObjectConverter.convertObjectToMap(ldtObject);
+        Map<String, Object> csMap = ObjectConverter.convertObjectToMap(csObject);
 
-    public void addMismatch(String field, Object ldtValue, Object csValue) {
-        mismatches.add(String.format("Field '%s' mismatch - LDT: %s, CS: %s", field, ldtValue, csValue));
-    }
+        MapDifference<String, Object> differences = Maps.difference(ldtMap, csMap);
 
-    public void addMismatches(String context, Map<String, Object> differences) {
-        differences.forEach((key, value) -> 
-            mismatches.add(String.format("%s: Field '%s' only in %s with value %s", context, key, context, value))
-        );
-    }
+        SyncReport report = new SyncReport();
 
-    public void printReport() {
-        if (mismatches.isEmpty()) {
-            System.out.println("✅ LDT and CS are in sync!");
-        } else {
-            System.out.println("❌ LDT and CS are NOT in sync. Differences:");
-            mismatches.forEach(System.out::println);
-        }
-    }
+        // Fields only in LDT but not in CS
+        report.addMismatches("Fields only in LDT", differences.entriesOnlyOnLeft());
 
-    public boolean isInSync() {
-        return mismatches.isEmpty();
+        // Fields only in CS but not in LDT
+        report.addMismatches("Fields only in CS", differences.entriesOnlyOnRight());
+
+        // Fields that are present in both but have different values
+        differences.entriesDiffering().forEach((key, valueDifference) -> {
+            report.addMismatch(key, valueDifference.leftValue(), valueDifference.rightValue());
+        });
+
+        return report;
     }
 }
