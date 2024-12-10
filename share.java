@@ -1,10 +1,31 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
-SELECT 
-    relname AS table_name,
-    pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
-    pg_size_pretty(pg_relation_size(relid)) AS table_size,
-    pg_size_pretty(pg_indexes_size(relid)) AS indexes_size,
-    pg_size_pretty(pg_total_relation_size(relid) - pg_relation_size(relid) - pg_indexes_size(relid)) AS toast_size
-FROM pg_catalog.pg_statio_user_tables
-ORDER BY pg_total_relation_size(relid) DESC
-LIMIT 10;
+public class SyncReport {
+
+    private List<String> mismatches = new ArrayList<>();
+
+    public void addMismatch(String field, Object ldtValue, Object csValue) {
+        mismatches.add(String.format("Field '%s' mismatch - LDT: %s, CS: %s", field, ldtValue, csValue));
+    }
+
+    public void addMismatches(String context, Map<String, Object> differences) {
+        differences.forEach((key, value) -> 
+            mismatches.add(String.format("%s: Field '%s' only in %s with value %s", context, key, context, value))
+        );
+    }
+
+    public void printReport() {
+        if (mismatches.isEmpty()) {
+            System.out.println("✅ LDT and CS are in sync!");
+        } else {
+            System.out.println("❌ LDT and CS are NOT in sync. Differences:");
+            mismatches.forEach(System.out::println);
+        }
+    }
+
+    public boolean isInSync() {
+        return mismatches.isEmpty();
+    }
+}
