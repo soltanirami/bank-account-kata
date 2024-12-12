@@ -1,61 +1,124 @@
-Here’s the full implementation for a non-intrusive Sync Status feature for an existing Angular legacy app. This will display a circular indicator (green or red) to show if the LDT and CS are in sync.
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-1. Folder Structure
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-src/
-  app/
-    features/
-      sync/
-        components/
-          sync-status/
-            sync-status.component.ts
-            sync-status.component.html
-            sync-status.component.scss
-        services/
-          sync.service.ts
-        sync.module.ts
-    legacy/
-      existing-legacy.component.ts
-      existing-legacy.component.html
+import java.util.Optional;
+import java.util.List;
 
-2. Complete Implementation
+class DealSyncValidatorTest {
 
-1️⃣ sync.module.ts
+    @Mock
+    private IDealStructureFetcher dealStructureFetcher;
 
-This is the Sync Module which defines the component and services related to the sync logic.
+    @Mock
+    private IDealRepo dealRepo;
 
-import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { SyncStatusComponent } from './components/sync-status/sync-status.component';
-import { RouterModule } from '@angular/router';
+    @Mock
+    private DealHandlerRepo dealHandlerRepo;
 
-@NgModule({
-  declarations: [SyncStatusComponent],
-  imports: [
-    CommonModule,
-    RouterModule.forChild([
-      { path: '', component: SyncStatusComponent }
-    ])
-  ],
-  exports: [SyncStatusComponent]
-})
-export class SyncModule {}
+    @Mock
+    private DealMapper dealMapper;
 
-2️⃣ sync.service.ts
+    @Mock
+    private WaitingEventTransactionService waitingEventTransactionService;
 
-This is the service that handles API calls to the backend to check sync status between LDT and CS.
+    @InjectMocks
+    private DealSyncValidator dealSyncValidator;
 
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
 
-@Injectable({
-  providedIn: 'root'
-})
-export class SyncService {
+    @Test
+    void validate_whenDataIsInSync_shouldReturnSuccess() {
+        // Arrange
+        long dealId = 14644L;
+        EDealHandler eDealHandler = mock(EDealHandler.class);
+        DealDto dealDtoFromCS = mock(DealDto.class);
+        EDeal eDeal = mock(EDeal.class);
+        DealDto mappedDeal = mock(DealDto.class);
+        SyncReport syncReport = mock(SyncReport.class);
 
-  private readonly SYNC_URL = '/api/sync'; // URL for the backend API
+        when(dealHandlerRepo.findByObjectIdAndObjectType(dealId, ObjectType.DEAL))
+                .thenReturn(Optional.of(eDealHandler));
+        when(eDealHandler.getFunctionalId()).thenReturn("fn-id");
+        when(eDealHandler.getVersionId()).thenReturn("v1");
+        when(dealStructureFetcher.fetchByFnId("fn-id", "v1")).thenReturn(dealDtoFromCS);
+        when(dealRepo.findById(dealId)).thenReturn(Optional.of(eDeal));
+        when(dealMapper.toCsDealDto(eDeal, new DealDto())).thenReturn(mappedDeal);
+        when(ComparisonUtil.compareObjects(mappedDeal, dealDtoFromCS)).thenReturn(syncReport);
+        when(syncReport.dataAreInSync()).thenReturn(true);
 
+        // Act
+        SyncReport result = dealSyncValidator.validate(dealId);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.dataAreInSync());
+        verify(dealHandlerRepo).findByObjectIdAndObjectType(dealId, ObjectType.DEAL);
+        verify(dealStructureFetcher).fetchByFnId("fn-id", "v1");
+        verify(dealRepo).findById(dealId);
+        verify(dealMapper).toCsDealDto(eDeal, new DealDto());
+        verify(ComparisonUtil).compareObjects(mappedDeal, dealDtoFromCS);
+        verifyNoInteractions(waitingEventTransactionService); // Ensure no calls to waiting events
+    }
+
+    @Test
+    void validate_whenDealHandlerIsMissing_shouldThrowException() {
+        // Arrange
+        long dealId = 14644L;
+
+        when(dealHandlerRepo.findByObjectIdAndObjectType(dealId, ObjectType.DEAL))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> dealSyncValidator.validate(dealId));
+        assertEquals("Deal: 14644 does not exist in dealHandler table", exception.getMessage());
+        verify(dealHandlerRepo).findByObjectIdAndObjectType(dealId, ObjectType.DEAL);
+        verifyNoInteractions(dealStructureFetcher, dealRepo, dealMapper, waitingEventTransactionService);
+    }
+
+    @Test
+    void validate_whenDataIsNotInSync_shouldFetchWaitingEvents() {
+        // Arrange
+        long dealId = 14644L;
+        EDealHandler eDealHandler = mock(EDealHandler.class);
+        DealDto dealDtoFromCS = mock(DealDto.class);
+        EDeal eDeal = mock(EDeal.class);
+        DealDto mappedDeal = mock(DealDto.class);
+        SyncReport syncReport = mock(SyncReport.class);
+
+        when(dealHandlerRepo.findByObjectIdAndObjectType(dealId, ObjectType.DEAL))
+                .thenReturn(Optional.of(eDealHandler));
+        when(eDealHandler.getFunctionalId()).thenReturn("fn-id");
+        when(eDealHandler.getVersionId()).thenReturn("v1");
+        when(dealStructureFetcher.fetchByFnId("fn-id", "v1")).thenReturn(dealDtoFromCS);
+        when(dealRepo.findById(dealId)).thenReturn(Optional.of(eDeal));
+        when(dealMapper.toCsDealDto(eDeal, new DealDto())).thenReturn(mappedDeal);
+        when(ComparisonUtil.compareObjects(mappedDeal, dealDtoFromCS)).thenReturn(syncReport);
+        when(syncReport.dataAreInSync()).thenReturn(false);
+        when(waitingEventTransactionService.fetchWaitingEvents(dealId)).thenReturn(List.of("Event1", "Event2"));
+
+        // Act
+        SyncReport result = dealSyncValidator.validate(dealId);
+
+        // Assert
+        assertNotNull(result);
+        assertFalse(result.dataAreInSync());
+        verify(syncReport).setWaitingEvents(List.of("Event1", "Event2"));
+        verify(dealHandlerRepo).findByObjectIdAndObjectType(dealId, ObjectType.DEAL);
+        verify(dealStructureFetcher).fetchByFnId("fn-id", "v1");
+        verify(dealRepo).findById(dealId);
+        verify(dealMapper).toCsDealDto(eDeal, new DealDto());
+        verify(waitingEventTransactionService).fetchWaitingEvents(dealId);
+    }
+}
   constructor(private http: HttpClient) {}
 
   /**
