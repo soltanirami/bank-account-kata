@@ -110,4 +110,14 @@ public class ComparisonUtil {
                 .map(Pattern::compile)
                 .collect(Collectors.toSet());
     }
+private static Set<Pattern> convertToPatterns(Set<String> ignoreFields) {
+    return ignoreFields.stream()
+            .map(path -> path
+                .replace("[*]", "\\[\\d+\\]") // Replace list wildcards (e.g., [*]) with [\d+]
+                .replace(".", "\\.") // Escape dots for proper path separation
+                .replace("*", "[^\\.\\[\\]]+") // Replace * with "any field name" regex
+            )
+            .map(Pattern::compile) // Compile the pattern
+            .collect(Collectors.toSet());
+}
 }
