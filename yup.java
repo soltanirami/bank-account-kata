@@ -1,114 +1,62 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
-import org.springframework.util.ClassUtils;
 
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+                                    import { Component, Input, OnInit } from '@angular/core';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { SyncService } from '../services/sync.service';
+import { SyncReport, SyncReportStatus } from '../models/sync-report.model';
+import { tap, map, switchMap } from 'rxjs/operators';
 
-public final class CompareTool {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+@Component({
+  selector: 'app-sync-status',
+  standalone: true,
+  imports: [],
+  template: `
+    <div class="sync-indicator-wrapper">
+      <div
+        class="sync-indicator"
+        [ngClass]="syncStatusClass$ | async"
+      ></div>
+      <button class="sync-button" (click)="triggerSync()">
+        <i class="fa fa-sync-alt"></i>
+      </button>
+    </div>
+  `,
+  styleUrls: ['./sync-status.component.scss'],
+})
+export class SyncStatusComponent implements OnInit {
+  @Input() dealId!: number;
+  syncStatusClass$!: Observable<string>;
 
-    static {
-        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+  private refreshTrigger$ = new BehaviorSubject<void>(undefined);
+
+  constructor(private readonly syncService: SyncService) {}
+
+  ngOnInit(): void {
+    if (this.dealId) {
+      this.syncStatusClass$ = this.refreshTrigger$.pipe(
+        switchMap(() =>
+          this.syncService.getSyncStatus(this.dealId).pipe(
+            tap((value) => console.log('SyncReport: ', value)),
+            map((report) => this.getStatusClass(report.status))
+          )
+        )
+      );
     }
+  }
 
-    public static List<String> compare(Object ldtObject, Object csObject, Set<String> fieldsToIgnore) {
-        Set<Pattern> ignorePatterns = convertToPatterns(fieldsToIgnore);
-        Map<String, Object> ldtMap = objectMapper.convertValue(ldtObject, Map.class);
-        Map<String, Object> csMap = objectMapper.convertValue(csObject, Map.class);
-        List<String> mismatches = new ArrayList<>();
-        compareMaps(ldtMap, csMap, "", mismatches, ignorePatterns);
-        return mismatches;
+  triggerSync(): void {
+    this.refreshTrigger$.next(); // Trigger sync check
+  }
+
+  private getStatusClass(status: SyncReportStatus): string {
+    switch (status) {
+      case SyncReportStatus.IN_SYNC:
+        return 'in-sync';
+      case SyncReportStatus.OUT_OF_SYNC:
+        return 'not-in-sync';
+      case SyncReportStatus.PENDING:
+        return 'not-in-sync-waiting';
+      default:
+        return 'unknown-status';
     }
-
-    private static void compareMaps(Map<String, Object> ldtMap, Map<String, Object> csMap,
-                                    String path, List<String> mismatches, Set<Pattern> ignorePatterns) {
-        Maps.difference(ldtMap, csMap).entriesDiffering().forEach((key, valueDifference) -> {
-            String currentPath = path.isEmpty() ? key : path + "." + key;
-
-            if (isPathIgnored(currentPath, ignorePatterns)) {
-                return;
-            }
-
-            Object ldtValue = valueDifference.leftValue();
-            Object csValue = valueDifference.rightValue();
-
-            if (ldtValue instanceof Map && csValue instanceof Map) {
-                compareMaps((Map<String, Object>) ldtValue, (Map<String, Object>) csValue, currentPath, mismatches, ignorePatterns);
-            } else if (ldtValue instanceof List && csValue instanceof List) {
-                compareLists((List<?>) ldtValue, (List<?>) csValue, currentPath, mismatches, ignorePatterns);
-            } else {
-                if (!Objects.equals(ldtValue, csValue)) {
-                    mismatches.add(String.format("Field '%s' mismatch - LDT: %s, CS: %s", currentPath, ldtValue, csValue));
-                }
-            }
-        });
-
-        // Handle missing fields
-        Maps.difference(ldtMap, csMap).entriesOnlyOnRight().forEach((key, value) ->
-            mismatches.add(String.format("Field '%s' present in CS but missing in LDT", path + "." + key))
-        );
-
-        Maps.difference(ldtMap, csMap).entriesOnlyOnLeft().forEach((key, value) ->
-            mismatches.add(String.format("Field '%s' present in LDT but missing in CS", path + "." + key))
-        );
-    }
-
-    private static void compareLists(List<?> ldtList, List<?> csList, String path,
-                                     List<String> mismatches, Set<Pattern> ignorePatterns) {
-        if (ldtList.size() != csList.size()) {
-            mismatches.add(String.format("Field '%s' size mismatch - LDT: %d, CS: %d", path, ldtList.size(), csList.size()));
-            return;
-        }
-
-        for (int i = 0; i < ldtList.size(); i++) {
-            String currentPath = path + "[" + i + "]";
-            Object ldtItem = ldtList.get(i);
-            Object csItem = csList.get(i);
-
-            if (isPathIgnored(currentPath, ignorePatterns)) {
-                continue;
-            }
-
-            if (ldtItem == null && csItem == null) {
-                continue;
-            }
-
-            if (ldtItem == null || csItem == null) {
-                mismatches.add(String.format("Field '%s' mismatch - LDT: %s, CS: %s", currentPath, ldtItem, csItem));
-                continue;
-            }
-
-            // Compare simple types
-            if (isSimpleType(ldtItem) || isSimpleType(csItem)) {
-                if (!Objects.equals(ldtItem, csItem)) {
-                    mismatches.add(String.format("Field '%s' mismatch - LDT: %s, CS: %s", currentPath, ldtItem, csItem));
-                }
-            } else {
-                // Compare complex objects
-                Map<String, Object> ldtItemMap = objectMapper.convertValue(ldtItem, Map.class);
-                Map<String, Object> csItemMap = objectMapper.convertValue(csItem, Map.class);
-                compareMaps(ldtItemMap, csItemMap, currentPath, mismatches, ignorePatterns);
-            }
-        }
-    }
-
-    private static boolean isPathIgnored(String path, Set<Pattern> ignorePatterns) {
-        return ignorePatterns.stream().anyMatch(pattern -> pattern.matcher(path).matches());
-    }
-
-    private static Set<Pattern> convertToPatterns(Set<String> fieldsToIgnore) {
-        return fieldsToIgnore.stream()
-                .map(path -> path.replace("[*]", "\\[\\d+\\]")  // Replace list wildcards
-                                 .replace(".", "\\.")         // Escape dots
-                                 .replace("*", "[^.\\[]+"))   // Replace * with any field name
-                .map(Pattern::compile)
-                .collect(Collectors.toSet());
-    }
-
-    private static boolean isSimpleType(Object obj) {
-        return obj == null || ClassUtils.isPrimitiveOrWrapper(obj.getClass())
-                || obj instanceof String || obj instanceof Enum;
-    }
+  }
 }
