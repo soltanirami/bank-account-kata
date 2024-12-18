@@ -1,4 +1,42 @@
+.sync-indicator-wrapper {
+  display: flex;
+  align-items: center;
+}
 
+.sync-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.sync-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #007bff; /* Sync icon color */
+}
+
+.sync-button:hover {
+  color: #0056b3;
+}
+
+.in-sync {
+  background-color: #28a745; // Green
+}
+
+.not-in-sync {
+  background-color: #dc3545; // Red
+}
+
+.not-in-sync-waiting {
+  background-color: #ffc107; // Orange
+}
+
+.unknown-status {
+  background-color: #6c757d; // Grey
+}
                                     import { Component, Input, OnInit } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { SyncService } from '../services/sync.service';
