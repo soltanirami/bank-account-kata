@@ -1,3 +1,118 @@
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.cacib.loanscape.ldt.features.sync.DealSyncValidator;
+import com.cacib.loanscape.ldt.features.sync.services.*;
+import com.cacib.loanscape.ldt.features.sync.models.*;
+import com.cacib.loanscape.ldt.features.sync.report.SyncReport;
+import com.cacib.loanscape.ldt.features.sync.comparator.ComparisonData;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.Set;
+
+@ExtendWith(MockitoExtension.class)
+class DealSyncValidatorTest {
+
+    @Mock
+    private WaitingEventTransactionService waitingEventTransactionService;
+
+    @Mock
+    private DealSyncService dealSyncService;
+
+    @Mock
+    private DealPositionSyncService dealPositionSyncService;
+
+    @Mock
+    private IDealRepo dealRepo;
+
+    @Mock
+    private IDealHandlerRepo dealHandlerRepo;
+
+    @InjectMocks
+    private DealSyncValidator dealSyncValidator;
+
+    private final Long dealId = 12345L;
+    private final EDeal eDeal = new EDeal();
+    private final EDealHandler eDealHandler = new EDealHandler();
+
+    private final ComparisonData<DealDto> dealComparisonData =
+        new ComparisonData<>(new DealDto(), new DealDto(), "LDT", "CS", "Deal", Set.of());
+    private final ComparisonData<DealPositionDto> dealPositionComparisonData =
+        new ComparisonData<>(new DealPositionDto(), new DealPositionDto(), "LDT", "CS", "DealPosition", Set.of());
+
+    @BeforeEach
+    void setUp() {
+        eDeal.setId(dealId);
+    }
+
+    @Test
+    void checkSync_WhenDealExists_ShouldReturnSyncReport() {
+        // Arrange
+        when(dealRepo.findById(dealId)).thenReturn(Optional.of(eDeal));
+        when(dealHandlerRepo.findByObjectIdAndObjectType(dealId, ObjectType.DEAL)).thenReturn(Optional.of(eDealHandler));
+
+        when(dealSyncService.prepareComparisonData(eDeal, eDealHandler)).thenReturn(dealComparisonData);
+        when(dealPositionSyncService.prepareComparisonData(eDeal, eDealHandler)).thenReturn(dealPositionComparisonData);
+
+        // Act
+        SyncReport report = dealSyncValidator.checkSync(dealId);
+
+        // Assert
+        assertNotNull(report);
+        verify(dealSyncService).prepareComparisonData(eDeal, eDealHandler);
+        verify(dealPositionSyncService).prepareComparisonData(eDeal, eDealHandler);
+
+        assertEquals(0, report.getMismatches().size(), "No mismatches expected");
+    }
+
+    @Test
+    void checkSync_WhenDealDoesNotExist_ShouldThrowException() {
+        // Arrange
+        when(dealRepo.findById(dealId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            dealSyncValidator.checkSync(dealId);
+        });
+
+        assertEquals("Deal: " + dealId + " does not exist in LDT", exception.getMessage());
+        verify(dealRepo).findById(dealId);
+        verifyNoInteractions(dealSyncService, dealPositionSyncService);
+    }
+
+    @Test
+    void checkSync_WhenMismatchesExist_ShouldAddToReport() {
+        // Arrange
+        var mismatches = Set.of("Field 'positionType' mismatch - LDT: 'A', CS: 'B'");
+        when(dealRepo.findById(dealId)).thenReturn(Optional.of(eDeal));
+        when(dealHandlerRepo.findByObjectIdAndObjectType(dealId, ObjectType.DEAL)).thenReturn(Optional.of(eDealHandler));
+
+        when(dealSyncService.prepareComparisonData(eDeal, eDealHandler)).thenReturn(dealComparisonData);
+        when(dealPositionSyncService.prepareComparisonData(eDeal, eDealHandler)).thenReturn(dealPositionComparisonData);
+
+        var compareToolMock = mock(CompareTool.class);
+        when(compareToolMock.compare(any(), any(), any())).thenReturn(mismatches);
+
+        // Act
+        SyncReport report = dealSyncValidator.checkSync(dealId);
+
+        // Assert
+        assertNotNull(report);
+        verify(dealSyncService).prepareComparisonData(eDeal, eDealHandler);
+        verify(dealPositionSyncService).prepareComparisonData(eDeal, eDealHandler);
+
+        assertFalse(report.getMismatches().isEmpty(), "Mismatches should be present");
+    }
+}
+
+
 .sync-indicator-wrapper {
   display: flex;
   align-items: center;
