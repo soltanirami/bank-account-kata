@@ -1,6 +1,90 @@
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.cacib.loanscape.ldt.features.sync.mapper.TrancheMapper;
+import com.cacib.loanscape.ldt.features.sync.models.TrancheDto;
+import com.cacib.loanscape.ldt.features.sync.models.ETranche;
+import com.cacib.loanscape.ldt.features.sync.models.EDealHandler;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.mapstruct.factory.Mappers;
+
+import java.util.Optional;
+
+class TrancheMapperTest {
+
+    private TrancheMapper trancheMapper;
+
+    @BeforeEach
+    void setUp() {
+        trancheMapper = Mappers.getMapper(TrancheMapper.class);
+    }
+
+    @Test
+    void toTrancheDto_ShouldMapFieldsCorrectly() {
+        // Arrange
+        ETranche eTranche = new ETranche();
+        eTranche.setSti3("STI3_VALUE");
+        eTranche.setComment("Description_Value");
+        eTranche.setExternalProductCode("PRODUCT_CODE");
+        eTranche.setAmount(1000.55);
+        eTranche.setCurrency("EUR");
+        eTranche.setTerm("12");
+        eTranche.setTermUnitType("MONTHS");
+        eTranche.setAverageLife(24.75);
+
+        // Act
+        TrancheDto trancheDto = trancheMapper.toTrancheDto(eTranche);
+
+        // Assert
+        assertNotNull(trancheDto);
+        assertEquals("STI3_VALUE", trancheDto.getSti());
+        assertEquals("Description_Value", trancheDto.getDescription());
+        assertEquals("PRODUCT_CODE", trancheDto.getCommercialProductCode());
+        assertEquals(1000.55, trancheDto.getAmountAtSignOff());
+        assertEquals("EUR", trancheDto.getMainCurrency());
+        assertEquals("12", trancheDto.getDuration());
+        assertEquals("MONTHS", trancheDto.getDurationUnit());
+        assertEquals(24.75, trancheDto.getCurrentWAL());
+    }
+
+    @Test
+    void setFuncIdAndVersionId_ShouldSetFieldsCorrectly() {
+        // Arrange
+        TrancheDto trancheDto = new TrancheDto();
+        EDealHandler eDealHandler = mock(EDealHandler.class);
+        when(eDealHandler.getFunctionalId()).thenReturn("FUNC_ID");
+        when(eDealHandler.getVersionId()).thenReturn(10);
+
+        Optional<EDealHandler> dealHandler = Optional.of(eDealHandler);
+
+        // Act
+        trancheMapper.setFuncIdAndVersionId(trancheDto, dealHandler);
+
+        // Assert
+        assertEquals("FUNC_ID", trancheDto.getFunctionalId());
+        assertEquals(10, trancheDto.getFunctionalVersion());
+    }
+
+    @Test
+    void setFuncIdAndVersionId_WithEmptyOptional_ShouldNotSetFields() {
+        // Arrange
+        TrancheDto trancheDto = new TrancheDto();
+        Optional<EDealHandler> dealHandler = Optional.empty();
+
+        // Act
+        trancheMapper.setFuncIdAndVersionId(trancheDto, dealHandler);
+
+        // Assert
+        assertNull(trancheDto.getFunctionalId());
+        assertNull(trancheDto.getFunctionalVersion());
+    }
+}
+
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.cacib.loanscape.ldt.features.sync.DealSyncValidator;
 import com.cacib.loanscape.ldt.features.sync.services.*;
 import com.cacib.loanscape.ldt.features.sync.models.*;
