@@ -1,3 +1,175 @@
+package com.cacib.loanscape.ldt.features.sync.mapper;
+
+import com.cacib.loanscape.gateway.types.*;
+import com.cacib.loanscape.ldt.features.sync.model.EStepCreditCommittee;
+import com.cacib.loanscape.ldt.features.sync.model.EDeal;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class DealMapperImplTest {
+
+    private final DealMapperImpl dealMapper = new DealMapperImpl();
+
+    @Test
+    void toCSDDealDto_ShouldMapAllFieldsCorrectly() {
+        // Arrange
+        EDeal eDeal = new EDeal();
+        eDeal.setSti3("123");
+        eDeal.setStiName("Test Deal");
+        eDeal.setComment("Short description");
+        eDeal.setCurrency("USD");
+        eDeal.setMaxTenor(12);
+        eDeal.setSyndicationType("SYN1");
+        eDeal.setGlobalAmountAtStructuration(1000000.0);
+        eDeal.setProbabilityOfSuccess(0.8);
+
+        // Act
+        DealDto result = dealMapper.toCSDDealDto(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("123", result.getSti());
+        assertEquals("Test Deal", result.getStiName());
+        assertEquals("Short description", result.getShortDealDescription());
+        assertEquals("USD", result.getMainCurrency());
+        assertEquals(12, result.getMaxTenor());
+        assertEquals(1000000.0, result.getGlobalAmountAtStructuration());
+        assertEquals(0.8, result.getOriginatorGlossary().getProbabilityOfSuccess());
+    }
+
+    @Test
+    void toCSDDealDto_ShouldReturnNullWhenInputIsNull() {
+        // Act
+        DealDto result = dealMapper.toCSDDealDto(null);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    void toDealLenderDto_ShouldMapFieldsCorrectly() {
+        // Arrange
+        EDeal eDeal = new EDeal();
+        eDeal.setAnticipatedBookingDate("2024-12-31");
+
+        // Act
+        DealLenderDto result = dealMapper.toDealLenderDto(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("2024-12-31", result.getAnticipatedClosedDate());
+    }
+
+    @Test
+    void toDealLenderDto_ShouldHandleNullInput() {
+        // Act
+        DealLenderDto result = dealMapper.toDealLenderDto(null);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    void toCreditLimitDto_ShouldMapFieldsProperly() {
+        // Arrange
+        EStepCreditCommittee creditCommittee = new EStepCreditCommittee();
+        creditCommittee.setUnderwritingApproved(true);
+        creditCommittee.setFinalHoldMeter(200000.0);
+        creditCommittee.setBestEffort(150000.0);
+
+        // Act
+        CreditLimitDto result = dealMapper.toCreditLimitDto(creditCommittee);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.getUnderwritingApproved());
+        assertEquals(200000.0, result.getFinalHoldMeter());
+        assertEquals(150000.0, result.getBestEffortAmount());
+    }
+
+    @Test
+    void toCreditLimitDto_ShouldHandleNullInput() {
+        // Act
+        CreditLimitDto result = dealMapper.toCreditLimitDto(null);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    void toFinalTakePeriodDto_ShouldMapFieldsCorrectly() {
+        // Arrange
+        EStepCreditCommittee creditCommittee = new EStepCreditCommittee();
+        creditCommittee.setSellDownPeriodUnitNumber(10);
+        creditCommittee.setSellDownPeriodUnitType("MONTHS");
+        creditCommittee.setFinalTake(500000.0);
+
+        // Act
+        FinalTakePeriodDto result = dealMapper.toFinalTakePeriodDto(creditCommittee);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(10, result.getSellDownPeriod());
+        assertEquals("MONTHS", result.getSellDownPeriodUnit());
+        assertEquals(500000.0, result.getApprovedFinalTake());
+    }
+
+    @Test
+    void toFinalTakePeriodDto_ShouldHandleNullInput() {
+        // Act
+        FinalTakePeriodDto result = dealMapper.toFinalTakePeriodDto(null);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    void eDealToOriginatorGlossaryDto_ShouldMapFieldsCorrectly() {
+        // Arrange
+        EDeal eDeal = new EDeal();
+        eDeal.setTransactionPI(3.14);
+        eDeal.setState("CA");
+        eDeal.setProbabilityOfSuccess(0.85);
+
+        // Act
+        OriginatorGlossaryDto result = dealMapper.eDealToOriginatorGlossaryDto(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(3.14, result.getTransactionPI());
+        assertEquals("CA", result.getOriginationState());
+        assertEquals(0.85, result.getProbabilityOfSuccess());
+    }
+
+    @Test
+    void eDealToOriginatorGlossaryDto_ShouldHandleNullInput() {
+        // Act
+        OriginatorGlossaryDto result = dealMapper.eDealToOriginatorGlossaryDto(null);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    void toCSDDealDto_ShouldMapListFieldsCorrectly() {
+        // Arrange
+        EDeal eDeal = new EDeal();
+        eDeal.setExternalReferences(List.of("Ref1", "Ref2"));
+
+        // Act
+        DealDto result = dealMapper.toCSDDealDto(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.getExternalReferences().size());
+        assertEquals("Ref1", result.getExternalReferences().get(0));
+    }
+}
+
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
