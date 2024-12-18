@@ -1,6 +1,103 @@
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.cacib.loanscape.ldt.features.sync.mapper.DealLenderMapper;
+import com.cacib.loanscape.ldt.features.sync.models.CreditCommitteeDto;
+import com.cacib.loanscape.ldt.features.sync.models.DealLenderDto;
+import com.cacib.loanscape.ldt.features.sync.models.EDeal;
+import com.cacib.loanscape.ldt.features.sync.models.EStepCreditCommittee;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.mapstruct.factory.Mappers;
+
+import java.util.List;
+
+class DealLenderMapperTest {
+
+    private DealLenderMapper dealLenderMapper;
+
+    @BeforeEach
+    void setUp() {
+        dealLenderMapper = Mappers.getMapper(DealLenderMapper.class);
+    }
+
+    @Test
+    void toCreditCommitteeByLenderDto_ShouldMapFieldsCorrectly() {
+        // Arrange
+        EStepCreditCommittee committee = new EStepCreditCommittee();
+        committee.setCreditCommitteeType("COMMITTEE_TYPE");
+        committee.setCommitteeDate("2024-05-01");
+        committee.setUnderwritingApproved("APPROVED");
+        committee.setFinalHoldLetter("HOLD_LETTER");
+
+        // Act
+        CreditCommitteeDto result = dealLenderMapper.toCreditCommitteeByLenderDto(committee);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("COMMITTEE_TYPE", result.getCreditCommitteeCode());
+        assertEquals("2024-05-01", result.getCreditCommitteeApprovalDate());
+        assertEquals("APPROVED", result.getUnderwritingApproved());
+        assertEquals("HOLD_LETTER", result.getFinalHoldLetter());
+    }
+
+    @Test
+    void toDealLenderDto_ShouldMapFieldsCorrectly() {
+        // Arrange
+        EDeal eDeal = new EDeal();
+        eDeal.setAnticipatedBookingDate("2024-05-15");
+
+        // Act
+        DealLenderDto result = dealLenderMapper.toDealLenderDto(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("2024-05-15", result.getAnticipatedBookingDate());
+    }
+
+    @Test
+    void toCSDDealLenders_WithNullInput_ShouldReturnEmptyList() {
+        // Arrange
+        EDeal eDeal = new EDeal();
+        eDeal.setCreditCommitteeStep(null);
+
+        // Act
+        List<CreditCommitteeDto> result = dealLenderMapper.toCSDDealLenders(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void toCSDDealLenders_WithValidInput_ShouldMapCorrectly() {
+        // Arrange
+        EStepCreditCommittee committee1 = new EStepCreditCommittee();
+        committee1.setCreditCommitteeType("TYPE_1");
+
+        EStepCreditCommittee committee2 = new EStepCreditCommittee();
+        committee2.setCreditCommitteeType("TYPE_2");
+
+        EDeal eDeal = new EDeal();
+        eDeal.setCreditCommitteeStep(List.of(committee1, committee2));
+
+        // Act
+        List<CreditCommitteeDto> result = dealLenderMapper.toCSDDealLenders(eDeal);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("TYPE_1", result.get(0).getCreditCommitteeCode());
+        assertEquals("TYPE_2", result.get(1).getCreditCommitteeCode());
+    }
+}
+
+
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.cacib.loanscape.ldt.features.sync.mapper.TrancheMapper;
 import com.cacib.loanscape.ldt.features.sync.models.TrancheDto;
 import com.cacib.loanscape.ldt.features.sync.models.ETranche;
